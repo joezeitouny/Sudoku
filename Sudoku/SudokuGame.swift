@@ -123,18 +123,17 @@ struct SudokuCell: View {
         let isFixed = viewModel.fixedCells[row][col]
         let annotations = viewModel.annotations[row][col]
         let isCorrect = viewModel.isCorrectMove(row: row, col: col)
+        let isHighlighted = viewModel.isHighlighted(row: row, col: col)
 
         ZStack {
             Rectangle()
-                .fill(isFixed ? Color.gray.opacity(0.3) : Color.white)
+                .fill(backgroundColor)
                 .border(Color.black, width: 0.5)
 
             if value != 0 {
                 Text("\(value)")
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(
-                        isFixed ? .black : (isCorrect ? .blue : .red)
-                    )
+                    .foregroundColor(textColor)
             } else if !annotations.isEmpty {
                 VStack {
                     ForEach(0..<3) { row in
@@ -156,7 +155,29 @@ struct SudokuCell: View {
         }
         .frame(width: 40, height: 40)
         .onTapGesture {
+            viewModel.selectCell(row: row, col: col)
             viewModel.cellTapped(row: row, col: col)
+        }
+    }
+
+    private var backgroundColor: Color {
+        if let selectedCell = viewModel.selectedCell, selectedCell == (row, col) {
+            return .yellow
+        } else if viewModel.isHighlighted(row: row, col: col) {
+            return .yellow.opacity(0.3)
+        } else if viewModel.fixedCells[row][col] {
+            return Color.gray.opacity(0.3)
+        } else {
+            return .white
+        }
+    }
+
+
+    private var textColor: Color {
+        if viewModel.fixedCells[row][col] {
+            return .black
+        } else {
+            return viewModel.isCorrectMove(row: row, col: col) ? .blue : .red
         }
     }
 }
@@ -181,6 +202,9 @@ class SudokuViewModel: ObservableObject {
     @Published var elapsedTime: Double = 0
     @Published var isPuzzleSolved = false
     @Published var isTimerRunning: Bool = true
+    @Published var selectedCell: (row: Int, col: Int)? = nil
+    @Published var highlightedNumber: Int? = nil
+
     
     private var lastActiveTime: Date?
     private var solution: [[Int]] = Array(
@@ -221,6 +245,24 @@ class SudokuViewModel: ObservableObject {
                 object: nil
             )
     }
+    
+    func selectCell(row: Int, col: Int) {
+        if selectedCell != nil && selectedCell! == (row, col) {
+            // Deselect if tapping the same cell
+            selectedCell = nil
+            highlightedNumber = nil
+        } else {
+            selectedCell = (row, col)
+            highlightedNumber = board[row][col] != 0 ? board[row][col] : nil
+        }
+    }
+
+
+        func isHighlighted(row: Int, col: Int) -> Bool {
+            guard let selected = selectedCell else { return false }
+            return row == selected.row || col == selected.col ||
+                   (highlightedNumber != nil && board[row][col] == highlightedNumber)
+        }
 
     @objc private func appMovedToBackground() {
         pauseTimer()
