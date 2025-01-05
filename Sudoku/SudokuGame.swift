@@ -259,8 +259,8 @@ class SudokuViewModel: ObservableObject {
     func selectCell(row: Int, col: Int) {
         if selectedCell != nil && selectedCell! == (row, col) {
             // Deselect if tapping the same cell
-            selectedCell = nil
-            highlightedNumber = nil
+//            selectedCell = nil
+//            highlightedNumber = nil
         } else {
             selectedCell = (row, col)
             highlightedNumber = board[row][col] != 0 ? board[row][col] : nil
@@ -279,6 +279,9 @@ class SudokuViewModel: ObservableObject {
 
         func isHighlighted(row: Int, col: Int) -> Bool {
             guard let selected = selectedCell else {
+                if selectedNumber != nil && selectedNumber == 0 {
+                    return false
+                }
                 // Highlight all cells with the selected number
                 return selectedNumber != nil && board[row][col] == selectedNumber
             }
