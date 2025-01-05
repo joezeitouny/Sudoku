@@ -5,6 +5,7 @@ struct SudokuGame: View {
     @StateObject private var viewModel = SudokuViewModel()
     @State private var showNewGameAlert = false
     @State private var selectedDifficulty: Difficulty = .easy
+    @State private var showCongratulations = false
 
     var body: some View {
         VStack {
@@ -14,6 +15,8 @@ struct SudokuGame: View {
                 }
                 Spacer()
                 Text("Difficulty: \(viewModel.difficulty.rawValue)")
+                Spacer()
+                Text(viewModel.formattedTime)
             }
             .padding()
 
@@ -37,6 +40,9 @@ struct SudokuGame: View {
                 viewModel.toggleAnnotationMode()
             }
             .padding()
+
+            Text("Best Time - Easy: \(viewModel.formattedBestTime(.easy))")
+            Text("Best Time - Hard: \(viewModel.formattedBestTime(.hard))")
         }
         .alert(isPresented: $showNewGameAlert) {
             Alert(
@@ -51,6 +57,16 @@ struct SudokuGame: View {
                     viewModel.newGame(difficulty: .hard)
                 }
             )
+        }
+        .alert("Congratulations!", isPresented: $showCongratulations) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("You solved the puzzle in \(viewModel.formattedTime)!")
+        }
+        .onReceive(viewModel.$isPuzzleSolved) { isSolved in
+            if isSolved {
+                showCongratulations = true
+            }
         }
     }
 }
@@ -137,9 +153,18 @@ class SudokuViewModel: ObservableObject {
     @Published var selectedNumber: Int?
     @Published var isAnnotationMode = false
     @Published var difficulty: Difficulty = .easy
+    @Published var elapsedTime: TimeInterval = 0
+    @Published var isPuzzleSolved = false
 
     private var solution: [[Int]] = Array(repeating: Array(repeating: 0, count: 9), count: 9)
-    private var cancellables: Set<AnyCancellable> = []
+    private var timer: Timer?
+    private var bestTimes: [Difficulty: TimeInterval] = [.easy: .infinity, .hard: .infinity]
+
+    var formattedTime: String {
+        let minutes = Int(elapsedTime) / 60
+        let seconds = Int(elapsedTime) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
 
     init() {
         newGame(difficulty: .easy)
@@ -150,6 +175,16 @@ class SudokuViewModel: ObservableObject {
         generateBoard()
         removeNumbers(forDifficulty: difficulty)
         resetAnnotations()
+        startTimer()
+        isPuzzleSolved = false
+    }
+
+    private func startTimer() {
+        elapsedTime = 0
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            self?.elapsedTime += 1
+        }
     }
 
     func generateBoard() {
@@ -243,38 +278,64 @@ class SudokuViewModel: ObservableObject {
     }
 
     func resetAnnotations() {
-        annotations = Array(repeating: Array(repeating: [], count: 9), count: 9)
-    }
+            annotations = Array(repeating: Array(repeating: [], count: 9), count: 9)
+        }
 
-    func cellTapped(row: Int, col: Int) {
-        guard !fixedCells[row][col] else { return }
+        func cellTapped(row: Int, col: Int) {
+            guard !fixedCells[row][col] else { return }
 
-        if isAnnotationMode {
-            if let number = selectedNumber {
-                if annotations[row][col].contains(number) {
-                    annotations[row][col].removeAll { $0 == number }
-                } else {
-                    annotations[row][col].append(number)
+            if isAnnotationMode {
+                if let number = selectedNumber {
+                    if annotations[row][col].contains(number) {
+                        annotations[row][col].removeAll { $0 == number }
+                    } else {
+                        annotations[row][col].append(number)
+                    }
+                }
+            } else {
+                if let number = selectedNumber {
+                    board[row][col] = number
+                    checkPuzzleCompletion()
                 }
             }
-        } else {
-            if let number = selectedNumber {
-                board[row][col] = number
+        }
+
+        func selectNumber(_ number: Int) {
+            selectedNumber = number
+        }
+
+        func toggleAnnotationMode() {
+            isAnnotationMode.toggle()
+        }
+
+        func isCorrectMove(row: Int, col: Int) -> Bool {
+            return board[row][col] == solution[row][col]
+        }
+
+        private func checkPuzzleCompletion() {
+            if board == solution {
+                timer?.invalidate()
+                isPuzzleSolved = true
+                updateBestTime()
             }
         }
-    }
 
-    func selectNumber(_ number: Int) {
-        selectedNumber = number
-    }
+        private func updateBestTime() {
+            if elapsedTime < bestTimes[difficulty, default: .infinity] {
+                bestTimes[difficulty] = elapsedTime
+            }
+        }
 
-    func toggleAnnotationMode() {
-        isAnnotationMode.toggle()
-    }
-
-    func isCorrectMove(row: Int, col: Int) -> Bool {
-        return board[row][col] == solution[row][col]
-    }
+        func formattedBestTime(_ difficulty: Difficulty) -> String {
+            let bestTime = bestTimes[difficulty, default: .infinity]
+            if bestTime == .infinity {
+                return "N/A"
+            } else {
+                let minutes = Int(bestTime) / 60
+                let seconds = Int(bestTime) % 60
+                return String(format: "%02d:%02d", minutes, seconds)
+            }
+        }
 }
 
 enum Difficulty: String {
