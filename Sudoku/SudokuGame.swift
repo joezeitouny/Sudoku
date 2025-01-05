@@ -37,6 +37,14 @@ struct SudokuGame: View {
                             .cornerRadius(5)
                     }
                 }
+                Button(action: {
+                                    viewModel.selectNumber(0) // Use 0 to represent erase
+                                }) {
+                                    Image(systemName: "eraser")
+                                        .frame(width: 30, height: 30)
+                                        .background(Color.red.opacity(0.1))
+                                        .cornerRadius(5)
+                                }
             }
             .padding()
 
@@ -410,23 +418,27 @@ class SudokuViewModel: ObservableObject {
     }
 
     func cellTapped(row: Int, col: Int) {
-        guard !fixedCells[row][col] else { return }
+            guard !fixedCells[row][col] else { return }
 
-        if isAnnotationMode {
-            if let number = selectedNumber {
-                if annotations[row][col].contains(number) {
-                    annotations[row][col].removeAll { $0 == number }
-                } else {
-                    annotations[row][col].append(number)
+            if isAnnotationMode {
+                if let number = selectedNumber, number != 0 {
+                    if annotations[row][col].contains(number) {
+                        annotations[row][col].removeAll { $0 == number }
+                    } else {
+                        annotations[row][col].append(number)
+                    }
+                }
+            } else {
+                if let number = selectedNumber {
+                    board[row][col] = number
+                    if number == 0 {
+                        annotations[row][col].removeAll() // Clear annotations when erasing
+                    }
+                    checkPuzzleCompletion()
                 }
             }
-        } else {
-            if let number = selectedNumber {
-                board[row][col] = number
-                checkPuzzleCompletion()
-            }
+            selectCell(row: row, col: col)
         }
-    }
 
     func selectNumber(_ number: Int) {
         selectedNumber = number
