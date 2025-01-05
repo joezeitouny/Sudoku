@@ -167,6 +167,7 @@ class SudokuViewModel: ObservableObject {
     }
 
     init() {
+        loadBestTimes()
         newGame(difficulty: .easy)
     }
 
@@ -323,22 +324,38 @@ class SudokuViewModel: ObservableObject {
         private func updateBestTime() {
             if elapsedTime < bestTimes[difficulty, default: .infinity] {
                 bestTimes[difficulty] = elapsedTime
+                saveBestTimes()
             }
         }
 
         func formattedBestTime(_ difficulty: Difficulty) -> String {
             let bestTime = bestTimes[difficulty, default: .infinity]
             if bestTime == .infinity {
-                return "N/A"
+                return "Not available"
             } else {
                 let minutes = Int(bestTime) / 60
                 let seconds = Int(bestTime) % 60
                 return String(format: "%02d:%02d", minutes, seconds)
             }
         }
+    
+    func saveBestTimes() {
+        let fileURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("best_times.json")
+        let data = try? JSONEncoder().encode(bestTimes as [Difficulty: TimeInterval])
+        try? data?.write(to: fileURL)
+    }
+
+    func loadBestTimes() {
+        let fileURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("best_times.json")
+        if let data = try? Data(contentsOf: fileURL),
+           let loadedTimes = try? JSONDecoder().decode([Difficulty: TimeInterval].self, from: data) {
+            bestTimes = loadedTimes
+        }
+    }
+
 }
 
-enum Difficulty: String {
+enum Difficulty: String, Codable, Hashable {
     case easy = "Easy"
     case hard = "Hard"
 }
