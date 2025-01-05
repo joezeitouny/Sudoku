@@ -18,9 +18,16 @@ struct SudokuGame: View {
                             Text("Difficulty: \(viewModel.difficulty.rawValue)")
                             Spacer()
                             Text(viewModel.formattedTime)
-                Button(viewModel.isTimerRunning ? "Stop" : "Resume") {
-                                    viewModel.toggleTimer()
-                                }
+                Button(action: {
+                    viewModel.toggleTimer()
+                }) {
+                    Image(systemName: viewModel.isTimerRunning ? "pause.fill" : "play.fill")
+                        .frame(width: 30, height: 30)
+                        .background(viewModel.isTimerRunning ? Color.red.opacity(0.5) : Color.green.opacity(0.5))
+                        .foregroundColor(.white)
+                        .cornerRadius(5)
+                        .contentTransition(.symbolEffect(.replace))
+                }
                         }
             .padding()
 
@@ -50,7 +57,7 @@ struct SudokuGame: View {
                         }
                         .padding()
 
-            Button("Toggle Annotation Mode") {
+            Button(viewModel.isAnnotationMode ? "Annotation Mode" : "Normal Mode") {
                 viewModel.toggleAnnotationMode()
             }
             .padding()
