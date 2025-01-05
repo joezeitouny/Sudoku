@@ -27,26 +27,28 @@ struct SudokuGame: View {
             SudokuBoard(viewModel: viewModel)
 
             HStack {
-                ForEach(1...9, id: \.self) { number in
-                    Button(action: {
-                        viewModel.selectNumber(number)
-                    }) {
-                        Text("\(number)")
-                            .frame(width: 30, height: 30)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(5)
-                    }
-                }
-                Button(action: {
-                                    viewModel.selectNumber(0) // Use 0 to represent erase
+                            ForEach(1...9, id: \.self) { number in
+                                Button(action: {
+                                    viewModel.selectNumber(number)
                                 }) {
-                                    Image(systemName: "eraser")
+                                    Text("\(number)")
                                         .frame(width: 30, height: 30)
-                                        .background(Color.red.opacity(0.1))
+                                        .background(viewModel.selectedNumber == number ? Color.blue.opacity(0.5) : Color.blue.opacity(0.1))
+                                        .foregroundColor(viewModel.selectedNumber == number ? .white : .black)
                                         .cornerRadius(5)
                                 }
-            }
-            .padding()
+                            }
+                            Button(action: {
+                                viewModel.selectNumber(0) // Use 0 to represent erase
+                            }) {
+                                Image(systemName: "eraser")
+                                    .frame(width: 30, height: 30)
+                                    .background(viewModel.selectedNumber == 0 ? Color.red.opacity(0.5) : Color.red.opacity(0.1))
+                                    .foregroundColor(viewModel.selectedNumber == 0 ? .white : .black)
+                                    .cornerRadius(5)
+                            }
+                        }
+                        .padding()
 
             Button("Toggle Annotation Mode") {
                 viewModel.toggleAnnotationMode()
@@ -204,7 +206,7 @@ class SudokuViewModel: ObservableObject {
         repeating: Array(repeating: [], count: 9),
         count: 9
     )
-    @Published var selectedNumber: Int?
+    @Published var selectedNumber: Int? = nil
     @Published var isAnnotationMode = false
     @Published var difficulty: Difficulty = .easy
     @Published var elapsedTime: Double = 0
@@ -264,10 +266,22 @@ class SudokuViewModel: ObservableObject {
             highlightedNumber = board[row][col] != 0 ? board[row][col] : nil
         }
     }
-
+    
+    func selectNumber(_ number: Int) {
+            if selectedNumber == number {
+                selectedNumber = nil // Deselect if the same number is pressed again
+            } else {
+                selectedNumber = number
+            }
+            // Clear cell selection when a number is selected
+            selectedCell = nil
+        }
 
         func isHighlighted(row: Int, col: Int) -> Bool {
-            guard let selected = selectedCell else { return false }
+            guard let selected = selectedCell else {
+                // Highlight all cells with the selected number
+                return selectedNumber != nil && board[row][col] == selectedNumber
+            }
             return row == selected.row || col == selected.col ||
                    (highlightedNumber != nil && board[row][col] == highlightedNumber)
         }
@@ -438,11 +452,7 @@ class SudokuViewModel: ObservableObject {
                 }
             }
             selectCell(row: row, col: col)
-        }
-
-    func selectNumber(_ number: Int) {
-        selectedNumber = number
-    }
+        }    
 
     func toggleAnnotationMode() {
         isAnnotationMode.toggle()
