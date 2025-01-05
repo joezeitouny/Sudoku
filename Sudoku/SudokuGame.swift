@@ -11,14 +11,17 @@ struct SudokuGame: View {
     var body: some View {
         VStack {
             HStack {
-                Button("New Game") {
-                    showNewGameAlert = true
-                }
-                Spacer()
-                Text("Difficulty: \(viewModel.difficulty.rawValue)")
-                Spacer()
-                Text(viewModel.formattedTime)
-            }
+                            Button("New Game") {
+                                showNewGameAlert = true
+                            }
+                            Spacer()
+                            Text("Difficulty: \(viewModel.difficulty.rawValue)")
+                            Spacer()
+                            Text(viewModel.formattedTime)
+                Button(viewModel.isTimerRunning ? "Stop" : "Resume") {
+                                    viewModel.toggleTimer()
+                                }
+                        }
             .padding()
 
             SudokuBoard(viewModel: viewModel)
@@ -129,7 +132,9 @@ struct SudokuCell: View {
             if value != 0 {
                 Text("\(value)")
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(isFixed ? .black : (isCorrect ? .blue : .red))
+                    .foregroundColor(
+                        isFixed ? .black : (isCorrect ? .blue : .red)
+                    )
             } else if !annotations.isEmpty {
                 VStack {
                     ForEach(0..<3) { row in
@@ -158,24 +163,40 @@ struct SudokuCell: View {
 
 
 class SudokuViewModel: ObservableObject {
-    @Published var board: [[Int]] = Array(repeating: Array(repeating: 0, count: 9), count: 9)
-    @Published var fixedCells: [[Bool]] = Array(repeating: Array(repeating: false, count: 9), count: 9)
-    @Published var annotations: [[[Int]]] = Array(repeating: Array(repeating: [], count: 9), count: 9)
+    @Published var board: [[Int]] = Array(
+        repeating: Array(repeating: 0, count: 9),
+        count: 9
+    )
+    @Published var fixedCells: [[Bool]] = Array(
+        repeating: Array(repeating: false, count: 9),
+        count: 9
+    )
+    @Published var annotations: [[[Int]]] = Array(
+        repeating: Array(repeating: [], count: 9),
+        count: 9
+    )
     @Published var selectedNumber: Int?
     @Published var isAnnotationMode = false
     @Published var difficulty: Difficulty = .easy
     @Published var elapsedTime: Double = 0
     @Published var isPuzzleSolved = false
+    @Published var isTimerRunning: Bool = true
+    
     private var lastActiveTime: Date?
-
-    private var solution: [[Int]] = Array(repeating: Array(repeating: 0, count: 9), count: 9)
+    private var solution: [[Int]] = Array(
+        repeating: Array(repeating: 0, count: 9),
+        count: 9
+    )
     private var timer: Timer?
-    private var bestTimes: [Difficulty: TimeInterval] = [.easy: .infinity, .hard: .infinity]
+    private var bestTimes: [Difficulty: TimeInterval] = [
+        .easy: .infinity,
+        .hard: .infinity
+    ]
 
     var formattedTime: String {
-            let minutes = Int(elapsedTime) / 60
-            let seconds = Int(elapsedTime) % 60
-            return String(format: "%02d:%02d", minutes, seconds)
+        let minutes = Int(elapsedTime) / 60
+        let seconds = Int(elapsedTime) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
     }
 
     init() {
@@ -185,39 +206,29 @@ class SudokuViewModel: ObservableObject {
     }
     
     private func setupNotifications() {
-            NotificationCenter.default.addObserver(self, selector: #selector(appMovedToBackground), name: UIApplication.willResignActiveNotification, object: nil)
-            NotificationCenter.default.addObserver(self, selector: #selector(appBecameActive), name: UIApplication.didBecomeActiveNotification, object: nil)
-        }
+        NotificationCenter.default
+            .addObserver(
+                self,
+                selector: #selector(appMovedToBackground),
+                name: UIApplication.willResignActiveNotification,
+                object: nil
+            )
+        NotificationCenter.default
+            .addObserver(
+                self,
+                selector: #selector(appBecameActive),
+                name: UIApplication.didBecomeActiveNotification,
+                object: nil
+            )
+    }
 
-        @objc private func appMovedToBackground() {
-            pauseTimer()
-        }
+    @objc private func appMovedToBackground() {
+        pauseTimer()
+    }
 
-        @objc private func appBecameActive() {
-            resumeTimer()
-        }
-
-        func pauseTimer() {
-            timer?.invalidate()
-            lastActiveTime = Date()
-        }
-
-        func resumeTimer() {
-            if let lastActiveTime = lastActiveTime {
-                let inactiveTime = Date().timeIntervalSince(lastActiveTime)
-                startTimer(additionalTime: inactiveTime)
-            } else {
-                startTimer()
-            }
-        }
-
-    private func startTimer(additionalTime: TimeInterval = 0) {
-            timer?.invalidate()
-            timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-                self?.elapsedTime += 1
-            }
-            elapsedTime += additionalTime
-        }
+    @objc private func appBecameActive() {
+        resumeTimer()
+    }
 
     func newGame(difficulty: Difficulty) {
         self.difficulty = difficulty
@@ -228,12 +239,38 @@ class SudokuViewModel: ObservableObject {
         isPuzzleSolved = false
     }
 
-    private func startTimer() {
-        elapsedTime = 0
-        timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            self?.elapsedTime += 1
+    func toggleTimer() {
+        if isTimerRunning {
+            pauseTimer()
+        } else {
+            resumeTimer()
         }
+    }
+
+    func pauseTimer() {
+        timer?.invalidate()
+        lastActiveTime = Date()
+        isTimerRunning = false
+    }
+
+    func resumeTimer() {
+        if let lastActiveTime = lastActiveTime {
+            let inactiveTime = Date().timeIntervalSince(lastActiveTime)
+            startTimer(additionalTime: inactiveTime)
+        } else {
+            startTimer()
+        }
+        isTimerRunning = true
+    }
+
+    private func startTimer(additionalTime: TimeInterval = 0) {
+        timer?.invalidate()
+        timer = Timer
+            .scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+                self?.elapsedTime += 1
+            }
+        elapsedTime += additionalTime
+        isTimerRunning = true
     }
 
     func generateBoard() {
@@ -327,76 +364,85 @@ class SudokuViewModel: ObservableObject {
     }
 
     func resetAnnotations() {
-            annotations = Array(repeating: Array(repeating: [], count: 9), count: 9)
-        }
+        annotations = Array(repeating: Array(repeating: [], count: 9), count: 9)
+    }
 
-        func cellTapped(row: Int, col: Int) {
-            guard !fixedCells[row][col] else { return }
+    func cellTapped(row: Int, col: Int) {
+        guard !fixedCells[row][col] else { return }
 
-            if isAnnotationMode {
-                if let number = selectedNumber {
-                    if annotations[row][col].contains(number) {
-                        annotations[row][col].removeAll { $0 == number }
-                    } else {
-                        annotations[row][col].append(number)
-                    }
-                }
-            } else {
-                if let number = selectedNumber {
-                    board[row][col] = number
-                    checkPuzzleCompletion()
+        if isAnnotationMode {
+            if let number = selectedNumber {
+                if annotations[row][col].contains(number) {
+                    annotations[row][col].removeAll { $0 == number }
+                } else {
+                    annotations[row][col].append(number)
                 }
             }
-        }
-
-        func selectNumber(_ number: Int) {
-            selectedNumber = number
-        }
-
-        func toggleAnnotationMode() {
-            isAnnotationMode.toggle()
-        }
-
-        func isCorrectMove(row: Int, col: Int) -> Bool {
-            return board[row][col] == solution[row][col]
-        }
-
-        private func checkPuzzleCompletion() {
-            if board == solution {
-                timer?.invalidate()
-                isPuzzleSolved = true
-                updateBestTime()
+        } else {
+            if let number = selectedNumber {
+                board[row][col] = number
+                checkPuzzleCompletion()
             }
         }
+    }
 
-        private func updateBestTime() {
-            if elapsedTime < bestTimes[difficulty, default: .infinity] {
-                bestTimes[difficulty] = elapsedTime
-                saveBestTimes()
-            }
-        }
+    func selectNumber(_ number: Int) {
+        selectedNumber = number
+    }
 
-        func formattedBestTime(_ difficulty: Difficulty) -> String {
-            let bestTime = bestTimes[difficulty, default: .infinity]
-            if bestTime == .infinity {
-                return "Not available"
-            } else {
-                let minutes = Int(bestTime) / 60
-                let seconds = Int(bestTime) % 60
-                return String(format: "%02d:%02d", minutes, seconds)
-            }
+    func toggleAnnotationMode() {
+        isAnnotationMode.toggle()
+    }
+
+    func isCorrectMove(row: Int, col: Int) -> Bool {
+        return board[row][col] == solution[row][col]
+    }
+
+    private func checkPuzzleCompletion() {
+        if board == solution {
+            timer?.invalidate()
+            isPuzzleSolved = true
+            updateBestTime()
         }
+    }
+
+    private func updateBestTime() {
+        if elapsedTime < bestTimes[difficulty, default: .infinity] {
+            bestTimes[difficulty] = elapsedTime
+            saveBestTimes()
+        }
+    }
+
+    func formattedBestTime(_ difficulty: Difficulty) -> String {
+        let bestTime = bestTimes[difficulty, default: .infinity]
+        if bestTime == .infinity {
+            return "Not available"
+        } else {
+            let minutes = Int(bestTime) / 60
+            let seconds = Int(bestTime) % 60
+            return String(format: "%02d:%02d", minutes, seconds)
+        }
+    }
     
     func saveBestTimes() {
-        let fileURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("best_times.json")
-        let data = try? JSONEncoder().encode(bestTimes as [Difficulty: TimeInterval])
+        let fileURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(
+            "best_times.json"
+        )
+        let data = try? JSONEncoder().encode(
+            bestTimes as [Difficulty: TimeInterval]
+        )
         try? data?.write(to: fileURL)
     }
 
     func loadBestTimes() {
-        let fileURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("best_times.json")
+        let fileURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(
+            "best_times.json"
+        )
         if let data = try? Data(contentsOf: fileURL),
-           let loadedTimes = try? JSONDecoder().decode([Difficulty: TimeInterval].self, from: data) {
+           let loadedTimes = try? JSONDecoder().decode(
+            [Difficulty: TimeInterval].self,
+            from: data
+           ) {
             bestTimes = loadedTimes
         }
     }
