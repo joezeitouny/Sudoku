@@ -6,6 +6,7 @@ struct SudokuGame: View {
     @State private var showNewGameAlert = false
     @State private var selectedDifficulty: Difficulty = .easy
     @State private var showCongratulations = false
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         VStack {
@@ -66,6 +67,16 @@ struct SudokuGame: View {
         .onReceive(viewModel.$isPuzzleSolved) { isSolved in
             if isSolved {
                 showCongratulations = true
+            }
+        }
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            switch newPhase {
+            case .active:
+                viewModel.resumeTimer()
+            case .inactive, .background:
+                viewModel.pauseTimer()
+            @unknown default:
+                break
             }
         }
     }
@@ -153,23 +164,60 @@ class SudokuViewModel: ObservableObject {
     @Published var selectedNumber: Int?
     @Published var isAnnotationMode = false
     @Published var difficulty: Difficulty = .easy
-    @Published var elapsedTime: TimeInterval = 0
+    @Published var elapsedTime: Double = 0
     @Published var isPuzzleSolved = false
+    private var lastActiveTime: Date?
 
     private var solution: [[Int]] = Array(repeating: Array(repeating: 0, count: 9), count: 9)
     private var timer: Timer?
     private var bestTimes: [Difficulty: TimeInterval] = [.easy: .infinity, .hard: .infinity]
 
     var formattedTime: String {
-        let minutes = Int(elapsedTime) / 60
-        let seconds = Int(elapsedTime) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
+            let minutes = Int(elapsedTime) / 60
+            let seconds = Int(elapsedTime) % 60
+            return String(format: "%02d:%02d", minutes, seconds)
     }
 
     init() {
         loadBestTimes()
         newGame(difficulty: .easy)
+        setupNotifications()
     }
+    
+    private func setupNotifications() {
+            NotificationCenter.default.addObserver(self, selector: #selector(appMovedToBackground), name: UIApplication.willResignActiveNotification, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(appBecameActive), name: UIApplication.didBecomeActiveNotification, object: nil)
+        }
+
+        @objc private func appMovedToBackground() {
+            pauseTimer()
+        }
+
+        @objc private func appBecameActive() {
+            resumeTimer()
+        }
+
+        func pauseTimer() {
+            timer?.invalidate()
+            lastActiveTime = Date()
+        }
+
+        func resumeTimer() {
+            if let lastActiveTime = lastActiveTime {
+                let inactiveTime = Date().timeIntervalSince(lastActiveTime)
+                startTimer(additionalTime: inactiveTime)
+            } else {
+                startTimer()
+            }
+        }
+
+    private func startTimer(additionalTime: TimeInterval = 0) {
+            timer?.invalidate()
+            timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+                self?.elapsedTime += 1
+            }
+            elapsedTime += additionalTime
+        }
 
     func newGame(difficulty: Difficulty) {
         self.difficulty = difficulty
