@@ -7,17 +7,17 @@ struct SudokuGame: View {
     @State private var selectedDifficulty: Difficulty = .easy
     @State private var showCongratulations = false
     @Environment(\.scenePhase) private var scenePhase
-
+    
     var body: some View {
         VStack {
             HStack {
-                            Button("New Game") {
-                                showNewGameAlert = true
-                            }
-                            Spacer()
-                            Text("Difficulty: \(viewModel.difficulty.rawValue)")
-                            Spacer()
-                            Text(viewModel.formattedTime)
+                Button("New Game") {
+                    showNewGameAlert = true
+                }
+                Spacer()
+                Text("Difficulty: \(viewModel.difficulty.rawValue)")
+                Spacer()
+                Text(viewModel.formattedTime)
                 Button(action: {
                     viewModel.toggleTimer()
                 }) {
@@ -28,40 +28,40 @@ struct SudokuGame: View {
                         .cornerRadius(5)
                         .contentTransition(.symbolEffect(.replace))
                 }
-                        }
+            }
             .padding()
-
+            
             SudokuBoard(viewModel: viewModel)
-
+            
             HStack {
-                            ForEach(1...9, id: \.self) { number in
-                                Button(action: {
-                                    viewModel.selectNumber(number)
-                                }) {
-                                    Text("\(number)")
-                                        .frame(width: 30, height: 30)
-                                        .background(viewModel.selectedNumber == number ? Color.blue.opacity(0.5) : Color.blue.opacity(0.1))
-                                        .foregroundColor(viewModel.selectedNumber == number ? .white : .black)
-                                        .cornerRadius(5)
-                                }
-                            }
-                            Button(action: {
-                                viewModel.selectNumber(0) // Use 0 to represent erase
-                            }) {
-                                Image(systemName: "eraser")
-                                    .frame(width: 30, height: 30)
-                                    .background(viewModel.selectedNumber == 0 ? Color.red.opacity(0.5) : Color.red.opacity(0.1))
-                                    .foregroundColor(viewModel.selectedNumber == 0 ? .white : .black)
-                                    .cornerRadius(5)
-                            }
-                        }
-                        .padding()
-
+                ForEach(1...9, id: \.self) { number in
+                    Button(action: {
+                        viewModel.selectNumber(number)
+                    }) {
+                        Text("\(number)")
+                            .frame(width: 30, height: 30)
+                            .background(viewModel.selectedNumber == number ? Color.blue.opacity(0.5) : Color.blue.opacity(0.1))
+                            .foregroundColor(viewModel.selectedNumber == number ? .white : .black)
+                            .cornerRadius(5)
+                    }
+                }
+                Button(action: {
+                    viewModel.selectNumber(0) // Use 0 to represent erase
+                }) {
+                    Image(systemName: "eraser")
+                        .frame(width: 30, height: 30)
+                        .background(viewModel.selectedNumber == 0 ? Color.red.opacity(0.5) : Color.red.opacity(0.1))
+                        .foregroundColor(viewModel.selectedNumber == 0 ? .white : .black)
+                        .cornerRadius(5)
+                }
+            }
+            .padding()
+            
             Button(viewModel.isAnnotationMode ? "Annotation Mode" : "Normal Mode") {
                 viewModel.toggleAnnotationMode()
             }
             .padding()
-
+            
             Text("Best Time - Easy: \(viewModel.formattedBestTime(.easy))")
             Text("Best Time - Hard: \(viewModel.formattedBestTime(.hard))")
         }
@@ -104,7 +104,7 @@ struct SudokuGame: View {
 
 struct SudokuBoard: View {
     @ObservedObject var viewModel: SudokuViewModel
-
+    
     var body: some View {
         VStack(spacing: 0) {
             ForEach(0..<3) { blockRow in
@@ -134,19 +134,19 @@ struct SudokuCell: View {
     @ObservedObject var viewModel: SudokuViewModel
     let row: Int
     let col: Int
-
+    
     var body: some View {
         let value = viewModel.board[row][col]
         let isFixed = viewModel.fixedCells[row][col]
         let annotations = viewModel.annotations[row][col]
         let isCorrect = viewModel.isCorrectMove(row: row, col: col)
         let isHighlighted = viewModel.isHighlighted(row: row, col: col)
-
+        
         ZStack {
             Rectangle()
                 .fill(backgroundColor)
                 .border(Color.black, width: 0.5)
-
+            
             if value != 0 {
                 Text("\(value)")
                     .font(.system(size: 24, weight: .bold))
@@ -176,7 +176,7 @@ struct SudokuCell: View {
             viewModel.cellTapped(row: row, col: col)
         }
     }
-
+    
     private var backgroundColor: Color {
         if let selectedCell = viewModel.selectedCell, selectedCell == (row, col) {
             return .yellow
@@ -188,8 +188,8 @@ struct SudokuCell: View {
             return .white
         }
     }
-
-
+    
+    
     private var textColor: Color {
         if viewModel.fixedCells[row][col] {
             return .black
@@ -221,7 +221,7 @@ class SudokuViewModel: ObservableObject {
     @Published var isTimerRunning: Bool = true
     @Published var selectedCell: (row: Int, col: Int)? = nil
     @Published var highlightedNumber: Int? = nil
-
+    
     
     private var lastActiveTime: Date?
     private var solution: [[Int]] = Array(
@@ -233,13 +233,13 @@ class SudokuViewModel: ObservableObject {
         .easy: .infinity,
         .hard: .infinity
     ]
-
+    
     var formattedTime: String {
         let minutes = Int(elapsedTime) / 60
         let seconds = Int(elapsedTime) % 60
         return String(format: "%02d:%02d", minutes, seconds)
     }
-
+    
     init() {
         loadBestTimes()
         newGame(difficulty: .easy)
@@ -266,8 +266,8 @@ class SudokuViewModel: ObservableObject {
     func selectCell(row: Int, col: Int) {
         if selectedCell != nil && selectedCell! == (row, col) {
             // Deselect if tapping the same cell
-//            selectedCell = nil
-//            highlightedNumber = nil
+            //            selectedCell = nil
+            //            highlightedNumber = nil
         } else {
             selectedCell = (row, col)
             highlightedNumber = board[row][col] != 0 ? board[row][col] : nil
@@ -275,35 +275,35 @@ class SudokuViewModel: ObservableObject {
     }
     
     func selectNumber(_ number: Int) {
-            if selectedNumber == number {
-                selectedNumber = nil // Deselect if the same number is pressed again
-            } else {
-                selectedNumber = number
-            }
-            // Clear cell selection when a number is selected
-            selectedCell = nil
+        if selectedNumber == number {
+            selectedNumber = nil // Deselect if the same number is pressed again
+        } else {
+            selectedNumber = number
         }
-
-        func isHighlighted(row: Int, col: Int) -> Bool {
-            guard let selected = selectedCell else {
-                if selectedNumber != nil && selectedNumber == 0 {
-                    return false
-                }
-                // Highlight all cells with the selected number
-                return selectedNumber != nil && board[row][col] == selectedNumber
+        // Clear cell selection when a number is selected
+        selectedCell = nil
+    }
+    
+    func isHighlighted(row: Int, col: Int) -> Bool {
+        guard let selected = selectedCell else {
+            if selectedNumber != nil && selectedNumber == 0 {
+                return false
             }
-            return row == selected.row || col == selected.col ||
-                   (highlightedNumber != nil && board[row][col] == highlightedNumber)
+            // Highlight all cells with the selected number
+            return selectedNumber != nil && board[row][col] == selectedNumber
         }
-
+        return row == selected.row || col == selected.col ||
+        (highlightedNumber != nil && board[row][col] == highlightedNumber)
+    }
+    
     @objc private func appMovedToBackground() {
         pauseTimer()
     }
-
+    
     @objc private func appBecameActive() {
         resumeTimer()
     }
-
+    
     func newGame(difficulty: Difficulty) {
         self.difficulty = difficulty
         generateBoard()
@@ -312,7 +312,7 @@ class SudokuViewModel: ObservableObject {
         startTimer()
         isPuzzleSolved = false
     }
-
+    
     func toggleTimer() {
         if isTimerRunning {
             pauseTimer()
@@ -320,13 +320,13 @@ class SudokuViewModel: ObservableObject {
             resumeTimer()
         }
     }
-
+    
     func pauseTimer() {
         timer?.invalidate()
         lastActiveTime = Date()
         isTimerRunning = false
     }
-
+    
     func resumeTimer() {
         if let lastActiveTime = lastActiveTime {
             let inactiveTime = Date().timeIntervalSince(lastActiveTime)
@@ -336,7 +336,7 @@ class SudokuViewModel: ObservableObject {
         }
         isTimerRunning = true
     }
-
+    
     private func startTimer(additionalTime: TimeInterval = 0) {
         timer?.invalidate()
         timer = Timer
@@ -346,14 +346,14 @@ class SudokuViewModel: ObservableObject {
         elapsedTime += additionalTime
         isTimerRunning = true
     }
-
+    
     func generateBoard() {
         board = Array(repeating: Array(repeating: 0, count: 9), count: 9)
         _ = solveSudoku(&board)
         solution = board
         fixedCells = board.map { $0.map { $0 != 0 } }
     }
-
+    
     func solveSudoku(_ board: inout [[Int]]) -> Bool {
         for row in 0..<9 {
             for col in 0..<9 {
@@ -373,14 +373,14 @@ class SudokuViewModel: ObservableObject {
         }
         return true
     }
-
+    
     func isValid(board: [[Int]], row: Int, col: Int, num: Int) -> Bool {
         for x in 0..<9 {
             if board[row][x] == num || board[x][col] == num {
                 return false
             }
         }
-
+        
         let startRow = row - row % 3
         let startCol = col - col % 3
         for i in 0..<3 {
@@ -390,22 +390,22 @@ class SudokuViewModel: ObservableObject {
                 }
             }
         }
-
+        
         return true
     }
-
+    
     func removeNumbers(forDifficulty difficulty: Difficulty) {
         let numbersToRemove = difficulty == .easy ? 40 : 50
         var positions = Array(0..<81)
         positions.shuffle()
-
+        
         for i in 0..<numbersToRemove {
             let row = positions[i] / 9
             let col = positions[i] % 9
             let temp = board[row][col]
             board[row][col] = 0
             fixedCells[row][col] = false
-
+            
             var tempBoard = board
             let solutions = countSolutions(&tempBoard)
             if solutions != 1 {
@@ -414,7 +414,7 @@ class SudokuViewModel: ObservableObject {
             }
         }
     }
-
+    
     func countSolutions(_ board: inout [[Int]]) -> Int {
         var count = 0
         for row in 0..<9 {
@@ -436,42 +436,42 @@ class SudokuViewModel: ObservableObject {
         }
         return 1
     }
-
+    
     func resetAnnotations() {
         annotations = Array(repeating: Array(repeating: [], count: 9), count: 9)
     }
-
+    
     func cellTapped(row: Int, col: Int) {
-            guard !fixedCells[row][col] else { return }
-
-            if isAnnotationMode {
-                if let number = selectedNumber, number != 0 {
-                    if annotations[row][col].contains(number) {
-                        annotations[row][col].removeAll { $0 == number }
-                    } else {
-                        annotations[row][col].append(number)
-                    }
-                }
-            } else {
-                if let number = selectedNumber {
-                    board[row][col] = number
-                    if number == 0 {
-                        annotations[row][col].removeAll() // Clear annotations when erasing
-                    }
-                    checkPuzzleCompletion()
+        guard !fixedCells[row][col] else { return }
+        
+        if isAnnotationMode {
+            if let number = selectedNumber, number != 0 {
+                if annotations[row][col].contains(number) {
+                    annotations[row][col].removeAll { $0 == number }
+                } else {
+                    annotations[row][col].append(number)
                 }
             }
-            selectCell(row: row, col: col)
-        }    
-
+        } else {
+            if let number = selectedNumber {
+                board[row][col] = number
+                if number == 0 {
+                    annotations[row][col].removeAll() // Clear annotations when erasing
+                }
+                checkPuzzleCompletion()
+            }
+        }
+        selectCell(row: row, col: col)
+    }
+    
     func toggleAnnotationMode() {
         isAnnotationMode.toggle()
     }
-
+    
     func isCorrectMove(row: Int, col: Int) -> Bool {
         return board[row][col] == solution[row][col]
     }
-
+    
     private func checkPuzzleCompletion() {
         if board == solution {
             timer?.invalidate()
@@ -479,14 +479,14 @@ class SudokuViewModel: ObservableObject {
             updateBestTime()
         }
     }
-
+    
     private func updateBestTime() {
         if elapsedTime < bestTimes[difficulty, default: .infinity] {
             bestTimes[difficulty] = elapsedTime
             saveBestTimes()
         }
     }
-
+    
     func formattedBestTime(_ difficulty: Difficulty) -> String {
         let bestTime = bestTimes[difficulty, default: .infinity]
         if bestTime == .infinity {
@@ -507,7 +507,7 @@ class SudokuViewModel: ObservableObject {
         )
         try? data?.write(to: fileURL)
     }
-
+    
     func loadBestTimes() {
         let fileURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(
             "best_times.json"
@@ -520,7 +520,7 @@ class SudokuViewModel: ObservableObject {
             bestTimes = loadedTimes
         }
     }
-
+    
 }
 
 enum Difficulty: String, Codable, Hashable {
